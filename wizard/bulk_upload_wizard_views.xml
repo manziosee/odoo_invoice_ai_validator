@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_bulk_upload_wizard_form" model="ir.ui.view">
+        <field name="name">bulk.upload.wizard.form</field>
+        <field name="model">bulk.upload.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Bulk Upload Proofs of Payment">
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        Upload multiple proof-of-payment files at once.
+                        Each file becomes one payment proof record, queued for AI analysis.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="proof_type"/>
+                            <field name="partner_id"
+                                   placeholder="Leave empty to auto-detect from each document"/>
+                        </group>
+                        <group>
+                            <field name="process_async"/>
+                        </group>
+                    </group>
+                    <group string="Files">
+                        <field name="attachment_ids" widget="many2many_binary" nolabel="1"/>
+                    </group>
+                    <group string="Result" invisible="not result_summary">
+                        <group col="1">
+                            <field name="result_summary" readonly="1" nolabel="1"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_upload" string="Upload &amp; Queue"
+                            type="object" class="oe_highlight"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

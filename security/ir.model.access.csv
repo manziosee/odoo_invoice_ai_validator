@@ -2,3 +2,10 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_payment_proof_user,payment.proof user,model_payment_proof,account.group_account_invoice,1,1,1,0
 access_payment_proof_manager,payment.proof manager,model_payment_proof,account.group_account_manager,1,1,1,1
 access_validate_payment_wizard,validate.payment.wizard all,model_validate_payment_wizard,,1,1,1,1
+access_bulk_upload_wizard,bulk.upload.wizard all,model_bulk_upload_wizard,,1,1,1,1
+access_partner_scoring_rule_user,payment.partner.rule user,model_payment_partner_rule,account.group_account_invoice,1,0,0,0
+access_partner_scoring_rule_manager,payment.partner.rule manager,model_payment_partner_rule,account.group_account_manager,1,1,1,1
+access_payment_proof_audit_user,payment.proof.audit user,model_payment_proof_audit,account.group_account_invoice,1,0,0,0
+access_payment_proof_audit_manager,payment.proof.audit manager,model_payment_proof_audit,account.group_account_manager,1,1,1,0
+access_payment_proof_correction_user,payment.proof.correction user,model_payment_proof_correction,account.group_account_invoice,1,1,1,0
+access_payment_proof_correction_manager,payment.proof.correction manager,model_payment_proof_correction,account.group_account_manager,1,1,1,1

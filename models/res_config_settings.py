@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import models, fields
 
 
 class ResConfigSettings(models.TransientModel):
@@ -18,9 +18,25 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='odoo_invoice_ai_validator.groq_model',
         default='llama-3.2-11b-vision-preview',
     )
+    groq_max_retries = fields.Integer(
+        string='Max Retries on Groq Error',
+        config_parameter='odoo_invoice_ai_validator.groq_max_retries',
+        default=3,
+    )
     match_amount_tolerance = fields.Float(
         string='Amount Match Tolerance (%)',
         config_parameter='odoo_invoice_ai_validator.match_amount_tolerance',
         default=2.0,
-        help='Maximum percentage difference between extracted amount and invoice balance to consider a match.',
+    )
+    telegram_token = fields.Char(
+        string='Telegram Bot Token',
+        config_parameter='odoo_invoice_ai_validator.telegram_token',
+    )
+    twilio_sid = fields.Char(
+        string='Twilio Account SID',
+        config_parameter='odoo_invoice_ai_validator.twilio_sid',
+    )
+    twilio_token = fields.Char(
+        string='Twilio Auth Token',
+        config_parameter='odoo_invoice_ai_validator.twilio_token',
     )

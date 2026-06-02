@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- Process queued proofs every 5 minutes -->
+        <record id="cron_process_proof_queue" model="ir.cron">
+            <field name="name">AI Payment Validator: Process Queue</field>
+            <field name="model_id" search="[('model','=','payment.proof')]" model="ir.model"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_process_queue()</field>
+            <field name="interval_number">5</field>
+            <field name="interval_type">minutes</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+            <field name="priority">5</field>
+        </record>
+
+        <!-- Retry failed proofs every 30 minutes -->
+        <record id="cron_retry_failed_proofs" model="ir.cron">
+            <field name="name">AI Payment Validator: Retry Failed</field>
+            <field name="model_id" search="[('model','=','payment.proof')]" model="ir.model"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_retry_failed()</field>
+            <field name="interval_number">30</field>
+            <field name="interval_type">minutes</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+            <field name="priority">10</field>
+        </record>
+
+    </data>
+</odoo>

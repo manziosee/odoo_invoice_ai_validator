@@ -1,25 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Top-level action -->
+    <!-- Actions -->
     <record id="action_payment_proof" model="ir.actions.act_window">
         <field name="name">Payment Proofs</field>
         <field name="res_model">payment.proof</field>
         <field name="view_mode">tree,form</field>
-        <field name="context">{}</field>
     </record>
 
-    <!-- Menu under Accounting -->
-    <menuitem
-        id="menu_payment_proof_root"
-        name="AI Payment Validator"
-        parent="account.menu_finance"
-        sequence="99"
-    />
-    <menuitem
-        id="menu_payment_proof_list"
-        name="Payment Proofs"
-        parent="menu_payment_proof_root"
-        action="action_payment_proof"
-        sequence="1"
-    />
+    <!-- Root menu under Accounting -->
+    <menuitem id="menu_payment_proof_root"
+              name="AI Payment Validator"
+              parent="account.menu_finance"
+              sequence="99"/>
+
+    <menuitem id="menu_payment_proof_list"
+              name="Payment Proofs"
+              parent="menu_payment_proof_root"
+              action="action_payment_proof"
+              sequence="1"/>
+
+    <menuitem id="menu_partner_scoring_rules"
+              name="Partner Matching Rules"
+              parent="menu_payment_proof_root"
+              action="action_partner_scoring_rule"
+              sequence="2"/>
+
+    <menuitem id="menu_payment_proof_audit"
+              name="Audit Log"
+              parent="menu_payment_proof_root"
+              action="action_payment_proof_audit"
+              sequence="3"
+              groups="account.group_account_manager"/>
 </odoo>

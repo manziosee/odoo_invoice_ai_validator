@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="mail_template_payment_validated" model="mail.template">
+            <field name="name">AI Payment Validator: Invoice Paid Notification</field>
+            <field name="model_id" search="[('model','=','payment.proof')]" model="ir.model"/>
+            <field name="subject">Invoice {{ object.matched_invoice_id.name }} has been paid</field>
+            <field name="body_html"><![CDATA[
+<p>Hello {{ object.matched_invoice_id.invoice_user_id.name or 'Team' }},</p>
+<p>Great news — invoice <strong>{{ object.matched_invoice_id.name }}</strong>
+for client <strong>{{ object.matched_invoice_id.partner_id.name }}</strong>
+has been paid and validated.</p>
+<table style="border-collapse:collapse;width:100%;max-width:480px;">
+  <tr><td style="padding:6px;color:#666;">Invoice</td>
+      <td style="padding:6px;"><strong>{{ object.matched_invoice_id.name }}</strong></td></tr>
+  <tr><td style="padding:6px;color:#666;">Amount</td>
+      <td style="padding:6px;">{{ object.matched_invoice_id.currency_id.symbol }} {{ '{:,.2f}'.format(object.matched_invoice_id.amount_total) }}</td></tr>
+  <tr><td style="padding:6px;color:#666;">Client</td>
+      <td style="padding:6px;">{{ object.matched_invoice_id.partner_id.name }}</td></tr>
+  <tr><td style="padding:6px;color:#666;">Proof Ref</td>
+      <td style="padding:6px;">{{ object.name }}</td></tr>
+  <tr><td style="padding:6px;color:#666;">Validated by</td>
+      <td style="padding:6px;">{{ object.write_uid.name }}</td></tr>
+</table>
+<p style="margin-top:16px;color:#888;font-size:12px;">
+  — AI Payment Validator | Manzi Osee
+</p>
+            ]]></field>
+            <field name="email_to">{{ object.matched_invoice_id.invoice_user_id.email or '' }}</field>
+            <field name="auto_delete">True</field>
+        </record>
+    </data>
+</odoo>

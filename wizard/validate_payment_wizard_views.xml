@@ -7,33 +7,50 @@
             <form string="Confirm Payment Validation">
                 <sheet>
                     <div class="alert alert-info" role="alert">
-                        Review the details below before registering the payment in Odoo.
-                        You may adjust the amount, date, or reference if needed.
+                        Review and adjust below, then click Register Payment.
+                        You can pay multiple invoices at once if the proof covers them all.
                     </div>
 
-                    <group string="Matched Invoice">
-                        <group>
-                            <field name="invoice_name" readonly="1" string="Invoice"/>
-                            <field name="invoice_partner" readonly="1" string="Client"/>
-                            <field name="currency_id" invisible="1"/>
-                            <field name="invoice_amount_residual" readonly="1" string="Balance Due"/>
-                        </group>
+                    <group string="AI Match Summary">
                         <group>
                             <field name="match_confidence" readonly="1" widget="percentage" string="AI Confidence"/>
+                            <field name="matched_invoice_count" readonly="1" string="Invoices Found"/>
                         </group>
                         <group col="1">
                             <field name="match_notes" readonly="1" nolabel="1"/>
                         </group>
                     </group>
 
-                    <group string="Payment to Register">
+                    <group string="Invoices to Pay">
+                        <field name="invoice_ids" nolabel="1">
+                            <tree>
+                                <field name="name"/>
+                                <field name="partner_id"/>
+                                <field name="invoice_date"/>
+                                <field name="amount_residual"/>
+                                <field name="currency_id"/>
+                                <field name="payment_state" widget="badge"/>
+                            </tree>
+                        </field>
+                    </group>
+
+                    <group string="Payment Details">
                         <group>
-                            <field name="payment_amount" required="1"/>
                             <field name="payment_date" required="1"/>
+                            <field name="journal_id" required="1"/>
                         </group>
                         <group>
                             <field name="payment_reference"/>
-                            <field name="journal_id"/>
+                            <field name="currency_id"/>
+                        </group>
+                    </group>
+
+                    <group string="Partial Payment" invisible="matched_invoice_count != 1">
+                        <group>
+                            <field name="use_extracted_amount"/>
+                            <field name="extracted_amount" readonly="1"
+                                   invisible="not use_extracted_amount"
+                                   string="Amount from proof"/>
                         </group>
                     </group>
 

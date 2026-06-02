@@ -1,8 +1,8 @@
 {
     'name': 'AI Invoice Payment Validator',
-    'version': '17.0.1.0.0',
+    'version': '17.0.2.0.0',
     'category': 'Accounting/Accounting',
-    'summary': 'Upload a proof of payment — AI finds and validates the matching invoice automatically.',
+    'summary': 'Upload a proof of payment — AI finds, matches and validates the invoice automatically.',
     'author': 'Manzi Osee',
     'website': 'https://github.com/manziosee',
     'license': 'LGPL-3',
@@ -10,14 +10,18 @@
     'data': [
         'security/ir.model.access.csv',
         'data/sequence.xml',
+        'data/cron.xml',
+        'data/mail_template.xml',
         'views/menu.xml',
         'views/payment_proof_views.xml',
+        'views/partner_scoring_rule_views.xml',
+        'views/audit_log_views.xml',
         'views/res_config_settings_views.xml',
         'wizard/validate_payment_wizard_views.xml',
+        'wizard/bulk_upload_wizard_views.xml',
     ],
     'installable': True,
     'application': True,
     'auto_install': False,
-    # Optional dependencies — module loads without them, shows install hint to user
-    # pip install groq pdfminer.six PyMuPDF pillow
+    # pip install groq pdfminer.six PyMuPDF pillow requests
 }

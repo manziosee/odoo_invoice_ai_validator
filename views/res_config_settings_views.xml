@@ -7,17 +7,35 @@
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
                 <app string="AI Payment Validator" name="odoo_invoice_ai_validator">
-                    <block title="Groq AI Configuration">
+                    <block title="Groq AI">
                         <setting string="Groq API Key"
-                                 help="Get a free key at https://console.groq.com — the free tier is sufficient for production use.">
+                                 help="Get a free key at https://console.groq.com">
                             <field name="groq_api_key" password="True"/>
                         </setting>
                         <setting string="Groq Model">
                             <field name="groq_model"/>
                         </setting>
+                        <setting string="Max Retries on Groq Error">
+                            <field name="groq_max_retries"/>
+                        </setting>
+                    </block>
+                    <block title="Invoice Matching">
                         <setting string="Amount Match Tolerance (%)"
-                                 help="How close the extracted amount must be to the invoice balance to count as a match. Default: 2%.">
+                                 help="Max % difference between extracted and invoice amount. Default 2%.">
                             <field name="match_amount_tolerance"/>
+                        </setting>
+                    </block>
+                    <block title="Integrations">
+                        <setting string="Telegram Bot Token"
+                                 help="From @BotFather — enables WhatsApp/Telegram proof uploads.">
+                            <field name="telegram_token" password="True"/>
+                        </setting>
+                        <setting string="Twilio Account SID"
+                                 help="For WhatsApp integration via Twilio.">
+                            <field name="twilio_sid"/>
+                        </setting>
+                        <setting string="Twilio Auth Token">
+                            <field name="twilio_token" password="True"/>
                         </setting>
                     </block>
                 </app>

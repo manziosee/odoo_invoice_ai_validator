@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- ── List view ──────────────────────────────────────────────────── -->
-    <record id="view_payment_proof_list" model="ir.ui.view">
-        <field name="name">payment.proof.list</field>
+    <!-- ── Tree / List view ───────────────────────────────────────────────── -->
+    <record id="view_payment_proof_tree" model="ir.ui.view">
+        <field name="name">payment.proof.tree</field>
         <field name="model">payment.proof</field>
         <field name="arch" type="xml">
-            <tree string="Payment Proofs" decoration-success="state == 'validated'"
-                  decoration-danger="state == 'error'" decoration-warning="state == 'analyzing'">
+            <tree string="Payment Proofs"
+                  decoration-success="state == 'validated'"
+                  decoration-danger="state == 'error'"
+                  decoration-warning="state in ('queued','analyzing','matched')"
+                  decoration-muted="state == 'draft'">
                 <field name="name"/>
+                <field name="proof_type" widget="badge"/>
                 <field name="partner_id"/>
                 <field name="proof_filename"/>
                 <field name="extracted_payer"/>
@@ -16,17 +20,22 @@
                 <field name="extracted_currency"/>
                 <field name="extracted_date"/>
                 <field name="matched_invoice_id"/>
+                <field name="matched_invoice_count" string="Matches"/>
                 <field name="match_confidence" widget="percentage" optional="show"/>
+                <field name="is_duplicate" widget="boolean" optional="show"/>
+                <field name="retry_count" optional="show"/>
                 <field name="state" widget="badge"
                        decoration-success="state == 'validated'"
                        decoration-danger="state == 'error'"
-                       decoration-warning="state in ('analyzing','matched')"
+                       decoration-warning="state in ('queued','analyzing','matched')"
                        decoration-muted="state == 'draft'"/>
+                <button name="action_analyze" string="Analyze" type="object"
+                        icon="fa-magic" invisible="state not in ('draft','error')"/>
             </tree>
         </field>
     </record>
 
-    <!-- ── Form view ──────────────────────────────────────────────────── -->
+    <!-- ── Form view ──────────────────────────────────────────────────────── -->
     <record id="view_payment_proof_form" model="ir.ui.view">
         <field name="name">payment.proof.form</field>
         <field name="model">payment.proof</field>
@@ -39,35 +48,45 @@
                     <button name="action_open_validate_wizard" string="Validate Payment"
                             type="object" class="oe_highlight"
                             invisible="state != 'matched'"/>
+                    <button name="action_mark_not_duplicate" string="Mark as Not Duplicate"
+                            type="object" invisible="not is_duplicate"/>
                     <button name="action_reset" string="Reset"
-                            type="object"
-                            invisible="state in ('draft','validated')"/>
+                            type="object" invisible="state in ('draft','validated')"/>
                     <field name="state" widget="statusbar"
-                           statusbar_visible="draft,analyzing,matched,validated"/>
+                           statusbar_visible="draft,queued,analyzing,matched,validated"/>
                 </header>
                 <sheet>
+                    <!-- Duplicate warning -->
+                    <div class="alert alert-warning" role="alert"
+                         invisible="not is_duplicate">
+                        This file appears to be a duplicate of
+                        <field name="duplicate_of_id" readonly="1" nolabel="1" class="oe_inline"/>
+                        Please verify before processing.
+                    </div>
+
                     <div class="oe_title">
                         <h1><field name="name" readonly="1"/></h1>
                     </div>
 
                     <group>
                         <group string="Document">
-                            <field name="partner_id"
-                                   readonly="state not in ('draft', 'error')"/>
+                            <field name="proof_type" readonly="state == 'validated'"/>
+                            <field name="partner_id" readonly="state == 'validated'"/>
                             <field name="proof_file" filename="proof_filename" widget="binary"
-                                   readonly="state not in ('draft', 'error')"/>
+                                   readonly="state not in ('draft','error')"/>
                             <field name="proof_filename" invisible="1"/>
                             <field name="proof_mimetype" readonly="1" optional="show"/>
+                            <field name="proof_hash" readonly="1" groups="base.group_no_one"/>
                         </group>
-                        <group string="Assignment">
+                        <group string="Settings">
+                            <field name="process_async"/>
                             <field name="user_id"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
 
                     <!-- AI Extraction Results -->
-                    <group string="AI Extraction Results"
-                           invisible="state == 'draft'">
+                    <group string="AI Extraction Results" invisible="state == 'draft'">
                         <group>
                             <field name="extracted_payer" readonly="1"/>
                             <field name="extracted_amount" readonly="1"/>
@@ -80,25 +99,43 @@
                         </group>
                     </group>
 
-                    <!-- Matched Invoice -->
+                    <!-- Invoice Match -->
                     <group string="Invoice Match" invisible="state == 'draft'">
                         <group>
                             <field name="matched_invoice_id"
                                    readonly="state == 'validated'"/>
                             <field name="match_confidence" readonly="1" widget="percentage"/>
+                            <field name="matched_invoice_count" readonly="1"/>
                             <field name="invoice_partner_id" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="invoice_amount_residual" readonly="1"/>
                             <field name="invoice_currency_id" invisible="1"/>
+                            <field name="invoice_amount_residual" readonly="1"/>
                         </group>
                         <group col="1">
                             <field name="match_notes" readonly="1" nolabel="1"/>
                         </group>
                     </group>
 
-                    <!-- Error details -->
+                    <!-- All matched invoices -->
+                    <group string="All AI Matches"
+                           invisible="matched_invoice_count &lt;= 1 or state == 'draft'">
+                        <field name="matched_invoice_ids" readonly="1" nolabel="1">
+                            <tree create="false" delete="false">
+                                <field name="name"/>
+                                <field name="partner_id"/>
+                                <field name="invoice_date"/>
+                                <field name="amount_residual"/>
+                                <field name="currency_id"/>
+                                <field name="payment_state" widget="badge"/>
+                            </tree>
+                        </field>
+                    </group>
+
+                    <!-- Error -->
                     <group string="Error Details" invisible="state != 'error'">
+                        <group>
+                            <field name="retry_count" readonly="1"/>
+                            <field name="retry_at" readonly="1"/>
+                        </group>
                         <group col="1">
                             <field name="validation_error" readonly="1" nolabel="1"/>
                         </group>
@@ -111,7 +148,15 @@
                         </group>
                     </group>
 
-                    <!-- AI raw response (debug) -->
+                    <!-- Score breakdown (technical) -->
+                    <group string="Score Breakdown" groups="base.group_no_one"
+                           invisible="not match_score_breakdown">
+                        <group col="1">
+                            <field name="match_score_breakdown" readonly="1" nolabel="1"/>
+                        </group>
+                    </group>
+
+                    <!-- AI raw response -->
                     <group string="AI Raw Response" groups="base.group_no_one"
                            invisible="not extracted_raw">
                         <group col="1">
@@ -129,7 +174,7 @@
         </field>
     </record>
 
-    <!-- ── Search view ────────────────────────────────────────────────── -->
+    <!-- ── Search view ────────────────────────────────────────────────────── -->
     <record id="view_payment_proof_search" model="ir.ui.view">
         <field name="name">payment.proof.search</field>
         <field name="model">payment.proof</field>
@@ -140,13 +185,19 @@
                 <field name="extracted_payer"/>
                 <field name="extracted_reference"/>
                 <field name="matched_invoice_id"/>
-                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
-                <filter name="matched" string="Matched" domain="[('state','=','matched')]"/>
+                <filter name="draft"     string="Draft"     domain="[('state','=','draft')]"/>
+                <filter name="queued"    string="Queued"    domain="[('state','in',('queued','analyzing'))]"/>
+                <filter name="matched"   string="Matched"   domain="[('state','=','matched')]"/>
                 <filter name="validated" string="Validated" domain="[('state','=','validated')]"/>
-                <filter name="error" string="Error" domain="[('state','=','error')]"/>
+                <filter name="error"     string="Error"     domain="[('state','=','error')]"/>
+                <filter name="duplicate" string="Duplicates" domain="[('is_duplicate','=',True)]"/>
+                <separator/>
+                <filter name="customer"  string="Customer Payments" domain="[('proof_type','=','customer_payment')]"/>
+                <filter name="vendor"    string="Vendor Bills"      domain="[('proof_type','=','vendor_bill')]"/>
                 <group expand="0" string="Group By">
-                    <filter name="group_partner" string="Client" context="{'group_by': 'partner_id'}"/>
-                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_partner" string="Client"  context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_state"   string="Status"  context="{'group_by': 'state'}"/>
+                    <filter name="group_type"    string="Type"    context="{'group_by': 'proof_type'}"/>
                 </group>
             </search>
         </field>
