@@ -29,10 +29,15 @@ def find_matching_invoices(
     """Returns list of (account.move, score, notes), best first. Empty list if none."""
 
     payer_name = (extracted.get('payer_name') or '').strip()
+    beneficiary = (extracted.get('beneficiary') or '').strip()
     amount_raw = _to_float(extracted.get('amount'))
     reference = (extracted.get('reference') or '').strip()
     pay_date = extracted.get('date')
     extracted_currency_name = (extracted.get('currency') or '').strip().upper()
+    description = (extracted.get('description') or '').strip()
+    invoice_numbers = extracted.get('invoice_numbers') or []
+    if isinstance(invoice_numbers, list):
+        invoice_numbers = [str(n).strip() for n in invoice_numbers if n]
 
     # Resolve extracted currency
     extracted_curr = None
@@ -101,51 +106,81 @@ def find_matching_invoices(
         score = 0
         reasons = []
 
-        # 1. Reference match
-        if reference:
-            haystack = ' '.join(filter(None, [inv.name, inv.ref, inv.narration or ''])).lower()
-            ref_lo = re.sub(r'\s+', ' ', reference.lower())
+        inv_haystack = ' '.join(filter(None, [
+            inv.name, inv.ref, inv.narration or '', inv.payment_reference or ''
+        ])).lower()
 
-            # Check per-partner regex pattern first
+        # 1. Direct invoice number match — highest priority (60 pts)
+        inv_matched = False
+        for inv_num in invoice_numbers:
+            if inv_num.lower() in inv_haystack or inv.name.lower() in inv_num.lower():
+                score += 60
+                reasons.append(f'Invoice number "{inv_num}" matched directly.')
+                inv_matched = True
+                break
+
+        # 2. Reference match (50 pts, or per-partner weight)
+        if not inv_matched and reference:
+            ref_lo = re.sub(r'\s+', ' ', reference.lower())
             pattern_matched = False
             if rule and rule.reference_pattern:
                 try:
                     if re.search(rule.reference_pattern, reference, re.IGNORECASE):
                         score += ref_weight
-                        reasons.append(f'Reference matched partner pattern.')
+                        reasons.append('Reference matched partner pattern.')
                         pattern_matched = True
                 except re.error:
                     pass
-
             if not pattern_matched:
-                if ref_lo in haystack:
+                if ref_lo in inv_haystack:
                     score += ref_weight
                     reasons.append(f'Reference "{reference}" found in invoice.')
-                elif _partial_ref_match(ref_lo, haystack):
+                elif _partial_ref_match(ref_lo, inv_haystack):
                     score += ref_weight * 0.5
                     reasons.append(f'Partial reference match on "{reference}".')
 
-        # 2. Amount match with currency conversion
+        # 3. Description / narration match (20 pts)
+        if description:
+            desc_lo = description.lower()
+            if inv.name.lower() in desc_lo or (inv.ref and inv.ref.lower() in desc_lo):
+                score += 20
+                reasons.append(f'Invoice ref found in payment description.')
+            elif inv.partner_id and inv.partner_id.name.lower() in desc_lo:
+                score += 10
+                reasons.append('Client name found in payment description.')
+
+        # 4. Amount match with currency conversion (30 pts)
         if amount_raw and inv.amount_residual > 0:
             converted = _convert_amount(env, amount_raw, extracted_curr, inv.currency_id)
             diff_pct = abs(converted - inv.amount_residual) / inv.amount_residual * 100
             if diff_pct <= tolerance:
                 pts = int(amt_weight * (1 - diff_pct / max(tolerance, 0.01))) + 1
                 score += pts
-                curr_note = f' (converted from {extracted_currency_name})' if extracted_curr and extracted_curr != inv.currency_id else ''
+                curr_note = f' (from {extracted_currency_name})' if extracted_curr and extracted_curr != inv.currency_id else ''
                 reasons.append(
                     f'Amount {converted:,.2f}{curr_note} ≈ balance {inv.amount_residual:,.2f} ({diff_pct:.1f}% diff).'
                 )
+            elif diff_pct <= 50:
+                # Partial payment — still a signal, just lower score
+                score += int(amt_weight * 0.3)
+                reasons.append(
+                    f'Amount {converted:,.2f} is partial payment of {inv.amount_residual:,.2f} ({diff_pct:.1f}% diff).'
+                )
 
-        # 3. Partner name similarity
+        # 5. Partner / payer name similarity (15 pts)
         if payer_name and inv.partner_id:
             sim = _name_similarity(payer_name, inv.partner_id.name or '')
             if sim >= 0.6:
-                pts = int(name_weight * sim)
-                score += pts
-                reasons.append(f'Payer "{payer_name}" ~ partner "{inv.partner_id.name}" ({sim*100:.0f}%).')
+                score += int(name_weight * sim)
+                reasons.append(f'Payer "{payer_name}" ~ "{inv.partner_id.name}" ({sim*100:.0f}%).')
 
-        # 4. Date proximity
+        # 5b. Beneficiary match — if PDF says "paid to X" and X is our company (5 pts)
+        if beneficiary and env.company.name:
+            if _name_similarity(beneficiary, env.company.name) >= 0.5:
+                score += 5
+                reasons.append(f'Beneficiary "{beneficiary}" matches our company.')
+
+        # 6. Date proximity (5 pts)
         if pay_date and inv.invoice_date:
             import datetime
             try:
@@ -158,7 +193,7 @@ def find_matching_invoices(
             except Exception:
                 pass
 
-        # 5. Correction history bonus
+        # 7. Correction history bonus (10 pts)
         boost_key = (inv.partner_id.id, inv.id)
         if correction_boost.get(boost_key, 0) > 0:
             score += 10
@@ -179,9 +214,9 @@ def _convert_amount(env, amount: float, from_currency, to_currency) -> float:
     if not from_currency or not to_currency or from_currency == to_currency:
         return amount
     try:
+        import odoo.fields as ofields
         return from_currency._convert(
-            amount, to_currency, env.company,
-            env['fields'].Date.today() if hasattr(env, 'fields') else __import__('odoo').fields.Date.today(),
+            amount, to_currency, env.company, ofields.Date.today()
         )
     except Exception as exc:
         _logger.debug('Currency conversion failed: %s', exc)

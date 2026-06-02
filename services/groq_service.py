@@ -11,24 +11,33 @@ import time
 
 _logger = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = """You are a payment document analyzer. Extract key payment information and return ONLY a valid JSON object — no markdown, no explanation:
+_SYSTEM_PROMPT = """You are an expert payment document analyzer. Your job is to read any proof of payment document — bank transfer slip, receipt, payment confirmation, wire transfer, mobile money, cheque, or any other payment document — and extract ALL payment-related information.
+
+The filename does NOT matter. Read the actual document content carefully.
+
+Return ONLY a valid JSON object (no markdown, no explanation, no code fences):
 
 {
-  "payer_name": "full name or company of the person/entity who made the payment",
+  "payer_name": "Full legal name or company name of whoever SENT/PAID the money",
+  "beneficiary": "Full name or company name of whoever RECEIVED the money",
   "amount": 12345.67,
-  "currency": "USD",
-  "date": "YYYY-MM-DD",
-  "reference": "payment reference, transaction ID, or invoice number mentioned",
-  "bank_info": "bank name, account number, or SWIFT/IBAN if visible",
-  "beneficiary": "name of the recipient / payee if visible",
-  "notes": "any other relevant details"
+  "currency": "ISO currency code e.g. RWF, USD, EUR — look for symbols like RF, RWF, $, €",
+  "date": "YYYY-MM-DD — the date the payment was made or confirmed",
+  "reference": "ANY reference number found: invoice number, transaction ID, payment ref, transfer ref, order number, narration code",
+  "bank_info": "Bank name, account number, IBAN, SWIFT/BIC, mobile money number — whatever is visible",
+  "payment_method": "bank transfer / mobile money / cheque / cash / card",
+  "invoice_numbers": ["list", "of", "any", "invoice", "numbers", "mentioned"],
+  "description": "What the payment is FOR — the narration, reason, or description written on the slip",
+  "notes": "Any other text that could help match this payment to an invoice"
 }
 
-Rules:
-- amount must be a number (float), not a string
-- date must be ISO YYYY-MM-DD; null if not found
-- If a field is not found, use null
-- Do NOT wrap in markdown code fences
+CRITICAL RULES:
+- amount must be a NUMBER (float), never a string. Strip commas, spaces. e.g. "1,250,000 RWF" → 1250000.0
+- date must be ISO YYYY-MM-DD if possible; null if truly not found
+- reference: look for ANYTHING labelled: Ref, Reference, TXN, Transaction, Invoice, INV, Order, Narration, Description, Payment for, Reason
+- If a field is not found, use null — never guess
+- invoice_numbers: extract ALL invoice-like codes (e.g. INV/2026/00001, BILL-001, etc.)
+- Read EVERY line of the document — payment info can appear anywhere
 """
 
 # Errors that are worth retrying (rate limit, server error)
@@ -180,9 +189,17 @@ def _parse_response(raw: str) -> dict:
         )
     if 'amount' in data and data['amount'] is not None:
         try:
-            data['amount'] = float(str(data['amount']).replace(',', '').strip())
+            data['amount'] = float(str(data['amount']).replace(',', '').replace(' ', '').strip())
         except (ValueError, TypeError):
             data['amount'] = 0.0
+
+    # Flatten invoice_numbers into the reference field if reference is empty
+    inv_nums = data.get('invoice_numbers') or []
+    if isinstance(inv_nums, list):
+        inv_nums = [str(n) for n in inv_nums if n]
+        data['invoice_numbers'] = inv_nums
+        if not data.get('reference') and inv_nums:
+            data['reference'] = ' '.join(inv_nums)
     return data
 
 

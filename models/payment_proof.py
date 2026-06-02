@@ -188,6 +188,16 @@ class PaymentProof(models.Model):
         try:
             extracted = self._extract_with_groq()
             self._write_extracted(extracted)
+
+            # Auto-fill partner from payer name if client field is empty
+            if not self.partner_id and extracted.get('payer_name'):
+                partner = self._find_partner(extracted['payer_name'])
+                if partner:
+                    self.write({'partner_id': partner.id})
+                    self.message_post(
+                        body=_('Client auto-detected from document: <b>%s</b>') % partner.name
+                    )
+
             matches = self._match_invoices(extracted)
 
             if matches:
@@ -344,14 +354,49 @@ class PaymentProof(models.Model):
             max_retries=max_retries,
         )
 
+    def _find_partner(self, payer_name):
+        """Try to find a matching res.partner from the extracted payer name."""
+        if not payer_name:
+            return False
+        # Exact match first
+        partner = self.env['res.partner'].search(
+            [('name', '=ilike', payer_name.strip())], limit=1
+        )
+        if partner:
+            return partner
+        # Partial word match — split payer name and search for any word
+        words = [w for w in payer_name.split() if len(w) > 3]
+        for word in words:
+            partner = self.env['res.partner'].search(
+                [('name', 'ilike', word), ('active', '=', True)], limit=1
+            )
+            if partner:
+                return partner
+        return False
+
     def _write_extracted(self, data):
+        # Combine reference + invoice numbers for display
+        ref = data.get('reference') or ''
+        inv_nums = data.get('invoice_numbers') or []
+        if isinstance(inv_nums, list) and inv_nums:
+            extra = ' | '.join(n for n in inv_nums if n not in ref)
+            if extra:
+                ref = (ref + ' | ' + extra).strip(' |')
+
+        # Combine description + notes for bank field display
+        desc = ' | '.join(filter(None, [
+            data.get('description'),
+            data.get('payment_method'),
+            data.get('bank_info'),
+        ]))
+
         self.write({
             'extracted_payer': data.get('payer_name') or False,
             'extracted_amount': data.get('amount') or 0.0,
             'extracted_currency': data.get('currency') or False,
             'extracted_date': self._parse_date(data.get('date')),
-            'extracted_reference': data.get('reference') or False,
-            'extracted_bank': data.get('bank_info') or False,
+            'extracted_reference': ref or False,
+            'extracted_bank': desc or False,
             'extracted_raw': json.dumps(data, indent=2, default=str),
         })
 
