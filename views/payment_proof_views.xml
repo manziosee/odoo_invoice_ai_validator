@@ -44,10 +44,7 @@
                 <header>
                     <button name="action_analyze" string="Analyze with AI"
                             type="object" class="oe_highlight"
-                            invisible="state not in ('draft','error')"/>
-                    <button name="action_process_now" string="Process Now"
-                            type="object" class="oe_highlight"
-                            invisible="state != 'queued'"/>
+                            invisible="state not in ('draft','error','queued')"/>
                     <button name="action_open_validate_wizard" string="Validate Payment"
                             type="object" class="oe_highlight"
                             invisible="state not in ('matched', 'error') or not matched_invoice_id"/>

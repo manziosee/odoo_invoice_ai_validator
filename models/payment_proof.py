@@ -177,7 +177,8 @@ class PaymentProof(models.Model):
                 'This file looks like a duplicate of %s. '
                 'Click "Mark as Not Duplicate" if you want to proceed.'
             ) % self.duplicate_of_id.name)
-        if self.process_async:
+        # If already queued or async is off → process immediately
+        if self.process_async and self.state not in ('queued', 'error'):
             self.write({'state': 'queued', 'validation_error': False, 'retry_count': 0})
             self.message_post(body=_('Queued for background AI processing.'))
         else:
