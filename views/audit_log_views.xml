@@ -54,10 +54,4 @@
         </field>
     </record>
 
-    <record id="action_payment_proof_audit" model="ir.actions.act_window">
-        <field name="name">Audit Log</field>
-        <field name="res_model">payment.proof.audit</field>
-        <field name="view_mode">tree,form</field>
-        <field name="context">{'create': False}</field>
-    </record>
 </odoo>

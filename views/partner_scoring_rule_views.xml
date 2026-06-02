@@ -55,9 +55,4 @@
         </field>
     </record>
 
-    <record id="action_partner_scoring_rule" model="ir.actions.act_window">
-        <field name="name">Partner Matching Rules</field>
-        <field name="res_model">payment.partner.rule</field>
-        <field name="view_mode">tree,form</field>
-    </record>
 </odoo>

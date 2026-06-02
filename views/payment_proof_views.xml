@@ -56,6 +56,9 @@
                            statusbar_visible="draft,queued,analyzing,matched,validated"/>
                 </header>
                 <sheet>
+                    <!-- Fields used in invisible expressions must be declared -->
+                    <field name="is_duplicate" invisible="1"/>
+
                     <!-- Duplicate warning -->
                     <div class="alert alert-warning" role="alert"
                          invisible="not is_duplicate">
