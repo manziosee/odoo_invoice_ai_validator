@@ -10,13 +10,14 @@ class ResConfigSettings(models.TransientModel):
         help='Get a free key at https://console.groq.com',
     )
     groq_model = fields.Selection([
-        ('llama-3.2-11b-vision-preview', 'Llama 3.2 11B Vision (recommended)'),
-        ('llama-3.2-90b-vision-preview', 'Llama 3.2 90B Vision (highest accuracy)'),
-        ('llama-3.1-70b-versatile', 'Llama 3.1 70B Versatile (text only)'),
-        ('mixtral-8x7b-32768', 'Mixtral 8x7B (text only)'),
+        ('meta-llama/llama-4-scout-17b-16e-instruct', 'Llama 4 Scout 17B Vision (recommended)'),
+        ('meta-llama/llama-4-maverick-17b-128e-instruct', 'Llama 4 Maverick 17B Vision'),
+        ('llama-3.3-70b-versatile', 'Llama 3.3 70B Versatile (text only)'),
+        ('llama-3.1-8b-instant', 'Llama 3.1 8B Instant (fast, text only)'),
+        ('qwen/qwen3-32b', 'Qwen3 32B (text only)'),
     ], string='Groq Model',
         config_parameter='odoo_invoice_ai_validator.groq_model',
-        default='llama-3.2-11b-vision-preview',
+        default='meta-llama/llama-4-scout-17b-16e-instruct',
     )
     groq_max_retries = fields.Integer(
         string='Max Retries on Groq Error',
