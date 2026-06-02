@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="seq_payment_proof" model="ir.sequence">
+            <field name="name">Payment Proof</field>
+            <field name="code">payment.proof</field>
+            <field name="prefix">PAY-PROOF-</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>

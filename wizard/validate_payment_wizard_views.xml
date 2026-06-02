@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_validate_payment_wizard_form" model="ir.ui.view">
+        <field name="name">validate.payment.wizard.form</field>
+        <field name="model">validate.payment.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirm Payment Validation">
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        Review the details below before registering the payment in Odoo.
+                        You may adjust the amount, date, or reference if needed.
+                    </div>
+
+                    <group string="Matched Invoice">
+                        <group>
+                            <field name="invoice_name" readonly="1" string="Invoice"/>
+                            <field name="invoice_partner" readonly="1" string="Client"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="invoice_amount_residual" readonly="1" string="Balance Due"/>
+                        </group>
+                        <group>
+                            <field name="match_confidence" readonly="1" widget="percentage" string="AI Confidence"/>
+                        </group>
+                        <group col="1">
+                            <field name="match_notes" readonly="1" nolabel="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Payment to Register">
+                        <group>
+                            <field name="payment_amount" required="1"/>
+                            <field name="payment_date" required="1"/>
+                        </group>
+                        <group>
+                            <field name="payment_reference"/>
+                            <field name="journal_id"/>
+                        </group>
+                    </group>
+
+                    <field name="proof_id" invisible="1"/>
+                </sheet>
+                <footer>
+                    <button name="action_confirm" string="Register Payment"
+                            type="object" class="oe_highlight"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

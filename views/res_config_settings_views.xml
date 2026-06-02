@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_ai_payment_validator_settings" model="ir.ui.view">
+        <field name="name">res.config.settings.ai.payment.validator</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app string="AI Payment Validator" name="odoo_invoice_ai_validator">
+                    <block title="Groq AI Configuration">
+                        <setting string="Groq API Key"
+                                 help="Get a free key at https://console.groq.com — the free tier is sufficient for production use.">
+                            <field name="groq_api_key" password="True"/>
+                        </setting>
+                        <setting string="Groq Model">
+                            <field name="groq_model"/>
+                        </setting>
+                        <setting string="Amount Match Tolerance (%)"
+                                 help="How close the extracted amount must be to the invoice balance to count as a match. Default: 2%.">
+                            <field name="match_amount_tolerance"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── List view ──────────────────────────────────────────────────── -->
+    <record id="view_payment_proof_list" model="ir.ui.view">
+        <field name="name">payment.proof.list</field>
+        <field name="model">payment.proof</field>
+        <field name="arch" type="xml">
+            <tree string="Payment Proofs" decoration-success="state == 'validated'"
+                  decoration-danger="state == 'error'" decoration-warning="state == 'analyzing'">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="proof_filename"/>
+                <field name="extracted_payer"/>
+                <field name="extracted_amount"/>
+                <field name="extracted_currency"/>
+                <field name="extracted_date"/>
+                <field name="matched_invoice_id"/>
+                <field name="match_confidence" widget="percentage" optional="show"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'validated'"
+                       decoration-danger="state == 'error'"
+                       decoration-warning="state in ('analyzing','matched')"
+                       decoration-muted="state == 'draft'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ── Form view ──────────────────────────────────────────────────── -->
+    <record id="view_payment_proof_form" model="ir.ui.view">
+        <field name="name">payment.proof.form</field>
+        <field name="model">payment.proof</field>
+        <field name="arch" type="xml">
+            <form string="Payment Proof">
+                <header>
+                    <button name="action_analyze" string="Analyze with AI"
+                            type="object" class="oe_highlight"
+                            invisible="state not in ('draft','error')"/>
+                    <button name="action_open_validate_wizard" string="Validate Payment"
+                            type="object" class="oe_highlight"
+                            invisible="state != 'matched'"/>
+                    <button name="action_reset" string="Reset"
+                            type="object"
+                            invisible="state in ('draft','validated')"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,analyzing,matched,validated"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Document">
+                            <field name="partner_id"
+                                   readonly="state not in ('draft', 'error')"/>
+                            <field name="proof_file" filename="proof_filename" widget="binary"
+                                   readonly="state not in ('draft', 'error')"/>
+                            <field name="proof_filename" invisible="1"/>
+                            <field name="proof_mimetype" readonly="1" optional="show"/>
+                        </group>
+                        <group string="Assignment">
+                            <field name="user_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+
+                    <!-- AI Extraction Results -->
+                    <group string="AI Extraction Results"
+                           invisible="state == 'draft'">
+                        <group>
+                            <field name="extracted_payer" readonly="1"/>
+                            <field name="extracted_amount" readonly="1"/>
+                            <field name="extracted_currency" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="extracted_date" readonly="1"/>
+                            <field name="extracted_reference" readonly="1"/>
+                            <field name="extracted_bank" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Matched Invoice -->
+                    <group string="Invoice Match" invisible="state == 'draft'">
+                        <group>
+                            <field name="matched_invoice_id"
+                                   readonly="state == 'validated'"/>
+                            <field name="match_confidence" readonly="1" widget="percentage"/>
+                            <field name="invoice_partner_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="invoice_amount_residual" readonly="1"/>
+                            <field name="invoice_currency_id" invisible="1"/>
+                        </group>
+                        <group col="1">
+                            <field name="match_notes" readonly="1" nolabel="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Error details -->
+                    <group string="Error Details" invisible="state != 'error'">
+                        <group col="1">
+                            <field name="validation_error" readonly="1" nolabel="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Notes -->
+                    <group string="Notes">
+                        <group col="1">
+                            <field name="notes" nolabel="1"/>
+                        </group>
+                    </group>
+
+                    <!-- AI raw response (debug) -->
+                    <group string="AI Raw Response" groups="base.group_no_one"
+                           invisible="not extracted_raw">
+                        <group col="1">
+                            <field name="extracted_raw" readonly="1" nolabel="1"/>
+                        </group>
+                    </group>
+                </sheet>
+
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Search view ────────────────────────────────────────────────── -->
+    <record id="view_payment_proof_search" model="ir.ui.view">
+        <field name="name">payment.proof.search</field>
+        <field name="model">payment.proof</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="extracted_payer"/>
+                <field name="extracted_reference"/>
+                <field name="matched_invoice_id"/>
+                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
+                <filter name="matched" string="Matched" domain="[('state','=','matched')]"/>
+                <filter name="validated" string="Validated" domain="[('state','=','validated')]"/>
+                <filter name="error" string="Error" domain="[('state','=','error')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_partner" string="Client" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+</odoo>
