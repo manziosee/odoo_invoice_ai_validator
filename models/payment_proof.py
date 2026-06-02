@@ -264,6 +264,13 @@ class PaymentProof(models.Model):
             'retry_count': 0, 'retry_at': False,
         })
 
+    def action_process_now(self):
+        """Bypass the queue — run AI analysis immediately."""
+        self.ensure_one()
+        if not self.proof_file:
+            raise UserError(_('No file uploaded.'))
+        self._do_analyze()
+
     def action_mark_not_duplicate(self):
         self.ensure_one()
         self.write({'is_duplicate': False, 'duplicate_of_id': False})

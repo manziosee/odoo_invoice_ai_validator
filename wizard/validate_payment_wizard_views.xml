@@ -45,16 +45,28 @@
                         </group>
                     </group>
 
-                    <group string="Partial Payment" invisible="matched_invoice_count != 1">
+                    <group string="Payment Amount" invisible="matched_invoice_count != 1">
                         <group>
-                            <field name="use_extracted_amount"/>
-                            <field name="extracted_amount" readonly="1"
-                                   invisible="not use_extracted_amount"
-                                   string="Amount from proof"/>
+                            <field name="extracted_amount" readonly="1" string="Amount on proof"/>
+                            <field name="use_extracted_amount"
+                                   string="Pay extracted amount (partial payment)"/>
+                        </group>
+                        <group col="1">
+                            <div class="alert alert-warning" role="alert"
+                                 invisible="not use_extracted_amount">
+                                A <strong>partial payment</strong> will be registered.
+                                The invoice will remain open for the remaining balance.
+                            </div>
+                            <div class="alert alert-success" role="alert"
+                                 invisible="use_extracted_amount">
+                                A <strong>full payment</strong> will be registered.
+                                The invoice will be marked as fully paid.
+                            </div>
                         </group>
                     </group>
 
                     <field name="proof_id" invisible="1"/>
+                    <field name="matched_invoice_count" invisible="1"/>
                 </sheet>
                 <footer>
                     <button name="action_confirm" string="Register Payment"

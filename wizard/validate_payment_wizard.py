@@ -55,6 +55,14 @@ class ValidatePaymentWizard(models.TransientModel):
         if proof.matched_invoice_id:
             self.currency_id = proof.matched_invoice_id.currency_id
 
+        # Auto-detect partial payment:
+        # if AI extracted an amount AND it is less than the invoice balance → partial
+        inv = proof.matched_invoice_id
+        if inv and proof.extracted_amount and proof.extracted_amount > 0:
+            tolerance = inv.amount_residual * 0.01  # 1% rounding tolerance
+            if proof.extracted_amount < (inv.amount_residual - tolerance):
+                self.use_extracted_amount = True
+
     @api.onchange('invoice_ids')
     def _onchange_invoice_ids(self):
         # Record correction if accountant changed the AI selection
@@ -80,8 +88,12 @@ class ValidatePaymentWizard(models.TransientModel):
                 continue
 
             amount = invoice.amount_residual
-            if self.use_extracted_amount and len(self.invoice_ids) == 1:
-                amount = self.extracted_amount or amount
+            extracted = self.extracted_amount or 0.0
+            # Use extracted amount when: toggle is on, single invoice, and amount is a valid partial
+            if self.use_extracted_amount and len(self.invoice_ids) == 1 and 0 < extracted < invoice.amount_residual:
+                amount = extracted
+            elif self.use_extracted_amount and len(self.invoice_ids) == 1 and extracted >= invoice.amount_residual:
+                amount = invoice.amount_residual  # cap at full balance — can't overpay
 
             ctx = {
                 'active_model': 'account.move',
