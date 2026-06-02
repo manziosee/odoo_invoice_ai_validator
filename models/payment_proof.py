@@ -71,7 +71,7 @@ class PaymentProof(models.Model):
     retry_count = fields.Integer(string='Retry Count', default=0, readonly=True)
     retry_at = fields.Datetime(string='Next Retry At', readonly=True)
     notes = fields.Text(string='Notes')
-    process_async = fields.Boolean(string='Process in Background', default=True)
+    process_async = fields.Boolean(string='Process in Background', default=False)
 
     # ── Computed helpers shown in form ─────────────────────────────────────
     invoice_amount_residual = fields.Monetary(
@@ -273,6 +273,14 @@ class PaymentProof(models.Model):
             'validation_error': False,
             'retry_count': 0, 'retry_at': False,
         })
+
+    @api.onchange('matched_invoice_id')
+    def _onchange_matched_invoice(self):
+        """When accountant manually picks an invoice in error state, advance to matched."""
+        if self.matched_invoice_id and self.state == 'error':
+            self.state = 'matched'
+            self.match_confidence = 0.0
+            self.match_notes = _('Invoice selected manually by %s.') % self.env.user.name
 
     def action_process_now(self):
         """Bypass the queue — run AI analysis immediately."""

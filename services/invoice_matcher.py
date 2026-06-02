@@ -113,7 +113,10 @@ def find_matching_invoices(
         # 1. Direct invoice number match — highest priority (60 pts)
         inv_matched = False
         for inv_num in invoice_numbers:
-            if inv_num.lower() in inv_haystack or inv.name.lower() in inv_num.lower():
+            inv_num_lo = inv_num.lower()
+            inv_name_lo = inv.name.lower()
+            # Match if invoice_number contains inv.name OR inv.name contains invoice_number
+            if inv_name_lo in inv_num_lo or inv_num_lo in inv_haystack:
                 score += 60
                 reasons.append(f'Invoice number "{inv_num}" matched directly.')
                 inv_matched = True
@@ -122,6 +125,10 @@ def find_matching_invoices(
         # 2. Reference match (50 pts, or per-partner weight)
         if not inv_matched and reference:
             ref_lo = re.sub(r'\s+', ' ', reference.lower())
+            ref_clean = re.sub(r'\W', '', ref_lo)
+            hay_clean = re.sub(r'\W', '', inv_haystack)
+            inv_name_clean = re.sub(r'\W', '', inv.name.lower())
+
             pattern_matched = False
             if rule and rule.reference_pattern:
                 try:
@@ -131,11 +138,13 @@ def find_matching_invoices(
                         pattern_matched = True
                 except re.error:
                     pass
+
             if not pattern_matched:
-                if ref_lo in inv_haystack:
+                if ref_lo in inv_haystack or inv_name_clean in ref_clean:
+                    # Either: full ref found in invoice, OR invoice name found inside the reference
                     score += ref_weight
-                    reasons.append(f'Reference "{reference}" found in invoice.')
-                elif _partial_ref_match(ref_lo, inv_haystack):
+                    reasons.append(f'Reference "{reference}" matches invoice.')
+                elif ref_clean in hay_clean or hay_clean and inv_name_clean in ref_clean:
                     score += ref_weight * 0.5
                     reasons.append(f'Partial reference match on "{reference}".')
 
@@ -153,18 +162,23 @@ def find_matching_invoices(
         if amount_raw and inv.amount_residual > 0:
             converted = _convert_amount(env, amount_raw, extracted_curr, inv.currency_id)
             diff_pct = abs(converted - inv.amount_residual) / inv.amount_residual * 100
+            curr_note = f' (from {extracted_currency_name})' if extracted_curr and extracted_curr != inv.currency_id else ''
             if diff_pct <= tolerance:
+                # Full / near-full payment
                 pts = int(amt_weight * (1 - diff_pct / max(tolerance, 0.01))) + 1
                 score += pts
-                curr_note = f' (from {extracted_currency_name})' if extracted_curr and extracted_curr != inv.currency_id else ''
                 reasons.append(
                     f'Amount {converted:,.2f}{curr_note} ≈ balance {inv.amount_residual:,.2f} ({diff_pct:.1f}% diff).'
                 )
-            elif diff_pct <= 50:
-                # Partial payment — still a signal, just lower score
-                score += int(amt_weight * 0.3)
+            elif converted < inv.amount_residual:
+                # Partial payment — extracted amount is less than the balance.
+                # Always award partial credit regardless of how large the gap is,
+                # because a PDF proof explicitly stating a partial amount is still
+                # a strong signal pointing at this invoice.
+                pts = max(5, int(amt_weight * 0.4))
+                score += pts
                 reasons.append(
-                    f'Amount {converted:,.2f} is partial payment of {inv.amount_residual:,.2f} ({diff_pct:.1f}% diff).'
+                    f'Partial payment: {converted:,.2f}{curr_note} of balance {inv.amount_residual:,.2f} ({diff_pct:.1f}% diff).'
                 )
 
         # 5. Partner / payer name similarity (15 pts)
@@ -230,12 +244,6 @@ def _to_float(value) -> float:
         return float(str(value).replace(',', '').strip())
     except (ValueError, TypeError):
         return 0.0
-
-
-def _partial_ref_match(ref: str, haystack: str) -> bool:
-    r = re.sub(r'\W', '', ref)
-    h = re.sub(r'\W', '', haystack)
-    return bool(r) and len(r) >= 4 and r in h
 
 
 def _name_similarity(a: str, b: str) -> float:

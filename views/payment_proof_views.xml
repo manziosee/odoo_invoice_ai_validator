@@ -50,7 +50,7 @@
                             invisible="state != 'queued'"/>
                     <button name="action_open_validate_wizard" string="Validate Payment"
                             type="object" class="oe_highlight"
-                            invisible="state != 'matched'"/>
+                            invisible="state not in ('matched', 'error') or not matched_invoice_id"/>
                     <button name="action_mark_not_duplicate" string="Mark as Not Duplicate"
                             type="object" invisible="not is_duplicate"/>
                     <button name="action_reset" string="Reset"
